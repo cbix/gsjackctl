@@ -1,4 +1,4 @@
-// gjs -I . test.js
+// gjs -I .. test.js
 
 const {GLib} = imports.gi;
 
@@ -30,3 +30,5 @@ try {
 } catch (e) {
     logError(e);
 }
+
+// vim: set sw=4 ts=4 :

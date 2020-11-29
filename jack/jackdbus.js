@@ -300,3 +300,5 @@ var JackTransport = class JackTransport extends _JackdbusProxyTransport {
         );
     }
 };
+
+// vim: set sw=4 ts=4 :
