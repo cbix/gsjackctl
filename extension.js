@@ -89,10 +89,10 @@ class Indicator extends PanelMenu.Button {
                 const [buffersize] = jackctl.GetBufferSizeSync();
                 const [rt] = jackctl.IsRealtimeSync();
                 this.jackStatus.label.text = `Running${rt ? ' (RT)' : ''}
-Load: ${load.toFixed(2)}
+Load: ${load.toFixed(1)} %
 Xruns: ${xruns}
-Samplerate: ${sr} Hz
-Block latency: ${latency.toFixed(2)} ms
+Samplerate: ${sr / 1000} kHz
+Block latency: ${latency.toFixed(1)} ms
 Buffer size: ${buffersize}`;
                 this.toggleJack.label.text = 'Stop JACK';
             } else {
