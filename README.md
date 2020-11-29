@@ -5,7 +5,7 @@ _This GNOME Shell-extension is a work in progress._
 ## About
 **gsjackctl** is a simple GNOME extension to control the JACK audio system. It works only with jack2 using jackdbus.
 
-![gsjackctl screenshot](https://user-images.githubusercontent.com/1295945/100521408-c6393400-31a3-11eb-87b8-ebcd01a9bab8.png)
+![gsjackctl screenshot](https://user-images.githubusercontent.com/1295945/100551911-1091e200-3284-11eb-8ebb-8425c923b692.png)
 
 ## Installation
 
@@ -22,18 +22,16 @@ git clone https://github.com/cbix/gsjackctl ~/.local/share/gnome-shell/extension
 - [x] start/stop JACK
 - [x] custom icon
 - [ ] new custom icon with status flags
-- [ ] show status
-  - [ ] xruns
-  - [ ] load
-  - [ ] rt
-  - [ ] sr
-  - [ ] latency
-  - [ ] buffer/frames
-  - [ ] interface/driver
+- [x] show status
+  - [ ] reset xruns action
+  - [ ] styling
 - [ ] error notifications
 - [ ] configuration
 - [ ] configuration profiles
 - [ ] transport (needs implementation of JackTransport dbus interface!)
+- [ ] i18n
+
+_TODO: open issues/PRs for these_
 
 ### future ideas
 - responsive + touch-friendly gui

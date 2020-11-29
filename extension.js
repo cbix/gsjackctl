@@ -1,3 +1,5 @@
+/* exported init */
+
 /* gsjackctl
  *
  * Copyright 2020 Florian Hülsmann <fh@cbix.de>
@@ -5,9 +7,7 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-/* exported init */
-
-const {GObject, St, Gio} = imports.gi;
+const {GObject, St, Gio, GLib} = imports.gi;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Main = imports.ui.main;
@@ -35,40 +35,76 @@ class Indicator extends PanelMenu.Button {
             gicon: _customGIcon('jack-plug-symbolic'),
             style_class: 'system-status-icon',
         }));
-        box.add_child(PopupMenu.arrowIcon(St.Side.BOTTOM));
+        // box.add_child(PopupMenu.arrowIcon(St.Side.BOTTOM));
         this.add_child(box);
 
-        this.toggleJack = new PopupMenu.PopupMenuItem('...');
+        this.jackStatus = new PopupMenu.PopupMenuItem('...', {
+            reactive: false,
+        });
+        this.toggleJack = new PopupMenu.PopupMenuItem('Start JACK');
         this.jackRunning = false;
 
         try {
             jackctl = new JackControl();
             this.toggleJack.connect('activate', () => {
                 if (this.jackRunning)
-                    jackctl.StopServerSync();
+                    jackctl.StopServerRemote();
                 else
-                    jackctl.StartServerSync();
+                    jackctl.StartServerRemote();
             });
+
+            const startBackground = (interval = 5000) => {
+                if (this.updateStatus()) {
+                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, interval, () => {
+                        return this.updateStatus();
+                    });
+                }
+            };
 
             jackctl.connectSignal('ServerStarted', () => {
-                this.jackRunning = true;
-                this.toggleJack.label.text = 'Stop JACK';
+                startBackground();
             });
-
             jackctl.connectSignal('ServerStopped', () => {
-                this.jackRunning = false;
-                this.toggleJack.label.text = 'Start JACK';
+                this.updateStatus();
             });
 
-            jackctl.IsStartedRemote(([running]) => {
-                this.jackRunning = running;
-                this.toggleJack.label.text = running ? 'Stop JACK' : 'Start JACK';
-            });
+            startBackground();
         } catch (e) {
-            log(e);
+            logError(e, 'gsjackctl init');
         }
 
+        this.menu.addMenuItem(this.jackStatus);
         this.menu.addMenuItem(this.toggleJack);
+    }
+
+    updateStatus() {
+        try {
+            const [started] = jackctl.IsStartedSync();
+            this.jackRunning = started;
+            if (started) {
+                const [load] = jackctl.GetLoadSync();
+                const [xruns] = jackctl.GetXrunsSync();
+                const [sr] = jackctl.GetSampleRateSync();
+                const [latency] = jackctl.GetLatencySync();
+                const [buffersize] = jackctl.GetBufferSizeSync();
+                const [rt] = jackctl.IsRealtimeSync();
+                this.jackStatus.label.text = `Running${rt ? ' (RT)' : ''}
+Load: ${load.toFixed(2)}
+Xruns: ${xruns}
+Samplerate: ${sr} Hz
+Block latency: ${latency.toFixed(2)} ms
+Buffer size: ${buffersize}`;
+                this.toggleJack.label.text = 'Stop JACK';
+            } else {
+                this.jackStatus.label.text = 'Stopped';
+                this.toggleJack.label.text = 'Start JACK';
+            }
+            return started;
+        } catch (e) {
+            logError(e, 'gsjackctl updateStatus');
+            this.jackStatus.label.text = `Error: ${e}`;
+            return false;
+        }
     }
 });
 
@@ -95,3 +131,5 @@ class Extension {
 function init(meta) {
     return new Extension(meta.uuid);
 }
+
+// vim: set sw=4 ts=4 :
