@@ -25,17 +25,23 @@ const _customGIcon = iconName => {
     return new Gio.FileIcon({file: Gio.File.new_for_path(path)});
 };
 
+const _iconJackStarted = _customGIcon('jack-started-symbolic');
+const _iconJackStopped = _customGIcon('jack-stopped-symbolic');
+const _iconJackError = _customGIcon('jack-error-symbolic');
+const _iconJackXruns = _customGIcon('jack-xruns-symbolic');
+
 const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
     _init() {
         super._init(0.0, 'JACK Control');
 
-        const box = new St.BoxLayout({style_class: 'panel-status-menu-box'});
-        box.add_child(new St.Icon({
-            gicon: _customGIcon('jack-plug-symbolic'),
+        this._icon = new St.Icon({
+            gicon: _iconJackStopped,
             style_class: 'system-status-icon',
-        }));
-        // box.add_child(PopupMenu.arrowIcon(St.Side.BOTTOM));
+        });
+
+        const box = new St.BoxLayout({style_class: 'panel-status-menu-box'});
+        box.add_child(this._icon);
         this.add_child(box);
 
         this.jackStatus = new PopupMenu.PopupMenuItem('...', {
@@ -71,6 +77,7 @@ class Indicator extends PanelMenu.Button {
             startBackground();
         } catch (e) {
             logError(e, 'gsjackctl init');
+            this._icon.gicon = _iconJackError;
         }
 
         this.menu.addMenuItem(this.jackStatus);
@@ -94,15 +101,22 @@ Xruns: ${xruns}
 Samplerate: ${sr / 1000} kHz
 Block latency: ${latency.toFixed(1)} ms
 Buffer size: ${buffersize}`;
+                if (xruns > 0)
+                    this._icon.gicon = _iconJackXruns;
+                else
+                    this._icon.gicon = _iconJackStarted;
+
                 this.toggleJack.label.text = 'Stop JACK';
             } else {
                 this.jackStatus.label.text = 'Stopped';
                 this.toggleJack.label.text = 'Start JACK';
+                this._icon.gicon = _iconJackStopped;
             }
             return started;
         } catch (e) {
             logError(e, 'gsjackctl updateStatus');
             this.jackStatus.label.text = `Error: ${e}`;
+            this._icon.gicon = _iconJackError;
             return false;
         }
     }

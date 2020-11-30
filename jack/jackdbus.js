@@ -1,5 +1,7 @@
 const {Gio} = imports.gi;
 
+/* exported JackControl, JackConfigure, JackPatchbay, JackSession, JackTransport */
+
 // dbus xml interface, retrieved by:
 // dbus-send --session --dest=org.jackaudio.service --type=method_call --print-reply /org/jackaudio/Controller org.freedesktop.DBus.Introspectable.Introspect
 
