@@ -35,6 +35,8 @@ class Indicator extends PanelMenu.Button {
     _init() {
         super._init(0.0, 'JACK Control');
 
+        this._backgroundRunning = false;
+
         this._icon = new St.Icon({
             gicon: _iconJackStopped,
             style_class: 'system-status-icon',
@@ -44,25 +46,34 @@ class Indicator extends PanelMenu.Button {
         box.add_child(this._icon);
         this.add_child(box);
 
-        this.jackStatus = new PopupMenu.PopupMenuItem('...', {
+        this._jackStatus = new PopupMenu.PopupMenuItem('...', {
             reactive: false,
         });
-        this.toggleJack = new PopupMenu.PopupMenuItem('Start JACK');
+        this._toggleJack = new PopupMenu.PopupMenuItem('Start JACK');
         this.jackRunning = false;
+        this._resetXruns = new PopupMenu.PopupMenuItem('Reset Xruns');
 
         try {
             jackctl = new JackControl();
-            this.toggleJack.connect('activate', () => {
+            this._toggleJack.connect('activate', () => {
                 if (this.jackRunning)
                     jackctl.StopServerRemote();
                 else
                     jackctl.StartServerRemote();
             });
 
-            const startBackground = (interval = 5000) => {
-                if (this.updateStatus()) {
+            this._resetXruns.connect('activate', () => {
+                jackctl.ResetXrunsRemote(() => {
+                    this.updateStatus();
+                });
+            });
+
+            const startBackground = (interval = 2000) => {
+                if (this.updateStatus() && !this._backgroundRunning) {
+                    this._backgroundRunning = true;
                     GLib.timeout_add(GLib.PRIORITY_DEFAULT, interval, () => {
-                        return this.updateStatus();
+                        this._backgroundRunning = this.updateStatus();
+                        return this._backgroundRunning;
                     });
                 }
             };
@@ -80,8 +91,9 @@ class Indicator extends PanelMenu.Button {
             this._icon.gicon = _iconJackError;
         }
 
-        this.menu.addMenuItem(this.jackStatus);
-        this.menu.addMenuItem(this.toggleJack);
+        this.menu.addMenuItem(this._jackStatus, 0);
+        this.menu.addMenuItem(this._resetXruns, 1);
+        this.menu.addMenuItem(this._toggleJack, 2);
     }
 
     updateStatus() {
@@ -95,7 +107,7 @@ class Indicator extends PanelMenu.Button {
                 const [latency] = jackctl.GetLatencySync();
                 const [buffersize] = jackctl.GetBufferSizeSync();
                 const [rt] = jackctl.IsRealtimeSync();
-                this.jackStatus.label.text = `Running${rt ? ' (RT)' : ''}
+                this._jackStatus.label.text = `Running${rt ? ' (RT)' : ''}
 Load: ${load.toFixed(1)} %
 Xruns: ${xruns}
 Samplerate: ${sr / 1000} kHz
@@ -106,16 +118,16 @@ Buffer size: ${buffersize}`;
                 else
                     this._icon.gicon = _iconJackStarted;
 
-                this.toggleJack.label.text = 'Stop JACK';
+                this._toggleJack.label.text = 'Stop JACK';
             } else {
-                this.jackStatus.label.text = 'Stopped';
-                this.toggleJack.label.text = 'Start JACK';
+                this._jackStatus.label.text = 'Stopped';
+                this._toggleJack.label.text = 'Start JACK';
                 this._icon.gicon = _iconJackStopped;
             }
             return started;
         } catch (e) {
             logError(e, 'gsjackctl updateStatus');
-            this.jackStatus.label.text = `Error: ${e}`;
+            this._jackStatus.label.text = `Error: ${e}`;
             this._icon.gicon = _iconJackError;
             return false;
         }
