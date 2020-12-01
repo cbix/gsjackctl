@@ -1,4 +1,4 @@
-const {Gio, GObject} = imports.gi;
+const {Gio} = imports.gi;
 
 /* exported JackControl, JackConfigure, JackPatchbay, JackSession, JackTransport */
 
