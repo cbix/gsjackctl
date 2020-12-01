@@ -1,4 +1,4 @@
-const {Gio} = imports.gi;
+const {Gio, GObject} = imports.gi;
 
 /* exported JackControl, JackConfigure, JackPatchbay, JackSession, JackTransport */
 
@@ -270,6 +270,59 @@ var JackConfigure = class JackConfigure extends _JackdbusProxyConfigure {
             'org.jackaudio.service',
             '/org/jackaudio/Controller'
         );
+
+        // stupid Gio.DBusProxy doesn't make this an actual class so we can't use regular class methods
+        this._fullConfigurationTree = () => {
+            const _traverseObjReducer = (acc, curr) => acc ? acc[curr] : undefined;
+
+            const pathStack = [[]],
+                tree = {};
+            try {
+                // basically a DFS through the configuration tree
+                // probably quite heavy so maybe don't run this too often
+                while (pathStack.length > 0) {
+                    const path = pathStack.pop();
+                    const [isLeaf, nodes] = this.ReadContainerSync(path);
+                    const currentNode = path.reduce(_traverseObjReducer, tree);
+                    if (!isLeaf) {
+                        nodes.forEach(node => {
+                            const newPath = path.concat(node);
+                            // log(`push ${JSON.stringify(newPath)}`);
+                            pathStack.push(newPath);
+                            currentNode[node] = {};
+                        });
+                    } else {
+                        nodes.forEach(node => {
+                            const newPath = path.concat(node);
+                            // TODO refactor this please
+                            // TODO use real values instead of VariantType.print()
+                            const [paramInfo] = this.GetParameterInfoSync(newPath);
+                            const paramValue = this.GetParameterValueSync(newPath);
+                            const paramConstraint = this.GetParameterConstraintSync(newPath);
+
+                            currentNode[node] = {
+                                name: paramInfo[1],
+                                desc: paramInfo[2],
+                                default: paramValue[2].print(true),
+                                value: paramValue[2].print(true),
+                                constraint: {
+                                    isRange: paramConstraint[0],
+                                    isStrict: paramConstraint[1],
+                                    isFakeValue: paramConstraint[2],
+                                    values: paramConstraint[3].map(v => ({
+                                        key: v[0].print(true),
+                                        name: v[1],
+                                    })),
+                                },
+                            };
+                        });
+                    }
+                }
+            } catch (e) {
+                logError(e, 'gsjackctl JackConfigure.fullConfigurationTree');
+            }
+            return tree;
+        };
     }
 };
 
