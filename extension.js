@@ -56,10 +56,16 @@ class Indicator extends PanelMenu.Button {
         try {
             jackctl = new JackControl();
             this._toggleJack.connect('activate', () => {
-                if (this.jackRunning)
-                    jackctl.StopServerRemote();
-                else
-                    jackctl.StartServerRemote();
+                try {
+                    if (this.jackRunning)
+                        jackctl.StopServerSync();
+                    else
+                        jackctl.StartServerSync();
+                } catch (e) {
+                    logError(e, 'gsjackctl toggleJack');
+                    this._jackStatus.label.text = `Error: ${e.message}`;
+                    this._icon.gicon = _iconJackError;
+                }
             });
 
             this._resetXruns.connect('activate', () => {
@@ -127,7 +133,7 @@ Buffer size: ${buffersize}`;
             return started;
         } catch (e) {
             logError(e, 'gsjackctl updateStatus');
-            this._jackStatus.label.text = `Error: ${e}`;
+            this._jackStatus.label.text = `Error: ${e.message}`;
             this._icon.gicon = _iconJackError;
             return false;
         }
