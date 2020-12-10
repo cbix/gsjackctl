@@ -1,6 +1,14 @@
+/* exported JackControl, JackConfigure, JackPatchbay, JackSession, JackTransport */
+
+/* gsjackctl
+ *
+ * Copyright 2020 Florian Hülsmann <fh@cbix.de>
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+
 const {Gio} = imports.gi;
 
-/* exported JackControl, JackConfigure, JackPatchbay, JackSession, JackTransport */
 
 // dbus xml interface, retrieved by:
 // dbus-send --session --dest=org.jackaudio.service --type=method_call --print-reply /org/jackaudio/Controller org.freedesktop.DBus.Introspectable.Introspect

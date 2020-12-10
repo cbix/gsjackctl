@@ -1,8 +1,12 @@
+.gsjackctl-status {
+  /*min-width: 240px;*/
+}
+
 .gsjackctl-xruns.has-xruns {
   font-weight: bold;
   color: orange;
 }
 
-.gsjackctl-xruns-button {
+.gsjackctl-inline-button {
   min-height: auto;
 }
