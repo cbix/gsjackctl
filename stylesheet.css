@@ -1,1 +1,8 @@
-/* Add your custom extension styling here */
+.gsjackctl-xruns.has-xruns {
+  font-weight: bold;
+  color: orange;
+}
+
+.gsjackctl-xruns-button {
+  min-height: auto;
+}

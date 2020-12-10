@@ -7,12 +7,14 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-const {GObject, St, Gio, GLib} = imports.gi;
+const {Clutter, GObject, St, Gio, GLib} = imports.gi;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Main = imports.ui.main;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
+const ModalDialog = imports.ui.modalDialog;
+const Dialog = imports.ui.dialog;
 
 const Me = ExtensionUtils.getCurrentExtension();
 
@@ -42,6 +44,25 @@ class Indicator extends PanelMenu.Button {
             style_class: 'system-status-icon',
         });
 
+        const clearXrunsIcon = new St.Icon({
+            icon_name: 'edit-clear-symbolic',
+            style_class: 'popup-menu-icon warning',
+        });
+        this._clearXrunsButton = new St.Button({
+            child: clearXrunsIcon,
+            style_class: 'gsjackctl-xruns-button button',
+        });
+
+        this._clearXrunsButton.connect('clicked', () => {
+            try {
+                jackctl.ResetXrunsRemote(() => {
+                    this.updateStatus();
+                });
+            } catch (e) {
+                logError(e, 'gsjackctl clearXrunsButton.clicked');
+            }
+        });
+
         const box = new St.BoxLayout({style_class: 'panel-status-menu-box'});
         box.add_child(this._icon);
         this.add_child(box);
@@ -51,14 +72,25 @@ class Indicator extends PanelMenu.Button {
         });
         this._toggleJack = new PopupMenu.PopupMenuItem('Start JACK');
         this.jackRunning = false;
-        this._resetXruns = new PopupMenu.PopupMenuItem('Reset Xruns');
+        this._resetXruns = new PopupMenu.PopupBaseMenuItem({
+            reactive: false,
+            style_class: 'gsjackctl-xruns',
+        });
+        this._resetXrunsLabel = new St.Label({
+            text: '0 xruns',
+            x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER,
+            style_class: 'gsjackctl-xruns-label',
+        });
+        this._resetXruns.add_child(this._resetXrunsLabel);
+        this._resetXruns.add_child(this._clearXrunsButton);
 
         try {
             jackctl = new JackControl();
             this._toggleJack.connect('activate', () => {
                 try {
                     if (this.jackRunning)
-                        jackctl.StopServerSync();
+                        this.confirmStopServer();
                     else
                         jackctl.StartServerSync();
                 } catch (e) {
@@ -66,12 +98,6 @@ class Indicator extends PanelMenu.Button {
                     this._jackStatus.label.text = `Error: ${e.message}`;
                     this._icon.gicon = _iconJackError;
                 }
-            });
-
-            this._resetXruns.connect('activate', () => {
-                jackctl.ResetXrunsRemote(() => {
-                    this.updateStatus();
-                });
             });
 
             const startBackground = (interval = 2000) => {
@@ -106,6 +132,7 @@ class Indicator extends PanelMenu.Button {
         try {
             const [started] = jackctl.IsStartedSync();
             this.jackRunning = started;
+            this._resetXruns.visible = started;
             if (started) {
                 const [load] = jackctl.GetLoadSync();
                 const [xruns] = jackctl.GetXrunsSync();
@@ -113,16 +140,20 @@ class Indicator extends PanelMenu.Button {
                 const [latency] = jackctl.GetLatencySync();
                 const [buffersize] = jackctl.GetBufferSizeSync();
                 const [rt] = jackctl.IsRealtimeSync();
+                this._resetXrunsLabel.text = `${xruns} xrun${xruns === 1 ? '' : 's'}`;
+                this._clearXrunsButton.visible = (xruns > 0);
                 this._jackStatus.label.text = `Running${rt ? ' (RT)' : ''}
 Load: ${load.toFixed(1)} %
-Xruns: ${xruns}
 Samplerate: ${sr / 1000} kHz
 Block latency: ${latency.toFixed(1)} ms
 Buffer size: ${buffersize}`;
-                if (xruns > 0)
+                if (xruns > 0) {
+                    this._resetXruns.add_style_class_name('has-xruns');
                     this._icon.gicon = _iconJackXruns;
-                else
+                } else {
+                    this._resetXruns.remove_style_class_name('has-xruns');
                     this._icon.gicon = _iconJackStarted;
+                }
 
                 this._toggleJack.label.text = 'Stop JACK';
             } else {
@@ -137,6 +168,35 @@ Buffer size: ${buffersize}`;
             this._icon.gicon = _iconJackError;
             return false;
         }
+    }
+
+    confirmStopServer() {
+        const stopConfirmationModal = new ModalDialog.ModalDialog();
+        const stopConfirmationContent = new Dialog.MessageDialogContent({
+            title: 'Stop JACK?',
+            description: 'Are you sure you want to stop the JACK server?',
+        });
+        stopConfirmationModal.contentLayout.add_child(stopConfirmationContent);
+        stopConfirmationModal.addButton({
+            label: 'Yes',
+            action: () => {
+                log('stopConfirmationModal: confirmed');
+                jackctl.StopServerSync();
+                stopConfirmationModal.close();
+            },
+            default: false,
+            key: Clutter.KEY_Escape,
+        });
+        stopConfirmationModal.addButton({
+            label: 'No',
+            action: () => {
+                log('stopConfirmationModal: not confirmed');
+                stopConfirmationModal.close();
+            },
+            default: true,
+            key: Clutter.KEY_Escape,
+        });
+        stopConfirmationModal.open();
     }
 });
 
