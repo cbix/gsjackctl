@@ -12,15 +12,17 @@ const Local = imports.ui.main.extensionManager.lookup('gsjackctl@cbix.de');
 const {Clutter, GObject, St} = imports.gi;
 const PopupMenu = imports.ui.popupMenu;
 
-var Status = GObject.registerClass(
-class Status extends PopupMenu.PopupBaseMenuItem {
-    _init(params) {
+var Status = GObject.registerClass({
+    Signals: {
+        'clear-xruns': {},
+    },
+}, class Status extends PopupMenu.PopupBaseMenuItem {
+    _init() {
         super._init({
             reactive: false,
             can_focus: false,
             style_class: 'gsjackctl-status',
         });
-        Object.assign(this, params);
 
         // build UI
         const layout = new Clutter.GridLayout({
@@ -57,7 +59,7 @@ class Status extends PopupMenu.PopupBaseMenuItem {
             style_class: 'gsjackctl-status-label',
         });
         this._loadValue = new St.Label({
-            text: '0 %',
+            text: '?? %',
             x_expand: true,
             style_class: 'gsjackctl-status-value',
         });
@@ -71,7 +73,7 @@ class Status extends PopupMenu.PopupBaseMenuItem {
             style_class: 'gsjackctl-status-label',
         });
         this._samplerateValue = new St.Label({
-            text: '48 kHz',
+            text: '?? kHz',
             x_expand: true,
             style_class: 'gsjackctl-status-value',
         });
@@ -85,7 +87,7 @@ class Status extends PopupMenu.PopupBaseMenuItem {
             style_class: 'gsjackctl-status-label',
         });
         this._latencyValue = new St.Label({
-            text: '2.7 ms',
+            text: '?? ms',
             x_expand: true,
             style_class: 'gsjackctl-status-value',
         });
@@ -99,7 +101,7 @@ class Status extends PopupMenu.PopupBaseMenuItem {
             style_class: 'gsjackctl-status-label',
         });
         this._buffersizeValue = new St.Label({
-            text: '123',
+            text: '??',
             x_expand: true,
             style_class: 'gsjackctl-status-value',
         });
@@ -120,7 +122,7 @@ class Status extends PopupMenu.PopupBaseMenuItem {
 
         // Xruns status + clear button
         this._xrunsStatusLabel = new St.Label({
-            text: '0 xruns',
+            text: '?? xruns',
             x_expand: true,
             style_class: 'gsjackctl-xruns-label',
         });
@@ -150,15 +152,21 @@ class Status extends PopupMenu.PopupBaseMenuItem {
             this._loadValue.text = `${status.load.toFixed(1)} %`;
             this._samplerateValue.text = `${status.sr / 1000} kHz`;
             this._latencyValue.text = `${status.latency.toFixed(1)} ms`;
-            this._buffersizeValue = `${status.buffersize}`;
-            this._xrunsStatusLabel = `${status.xruns} xrun${status.xruns === 1 ? '' : 's'}`;
+            this._buffersizeValue.text = `${status.buffersize}`;
+            this._xrunsStatusLabel.text = `${status.xruns} xrun${status.xruns === 1 ? '' : 's'}`;
             this._xrunsClearButton.visible = (status.xruns > 0);
+
             if (status.xruns > 0)
                 this._xrunsStatusLabel.add_style_class_name('has-xruns');
             else
                 this._xrunsStatusLabel.remove_style_class_name('has-xruns');
 
         }
+    }
+
+    setError(e) {
+        // TODO
+        log('status.setError', e.message);
     }
 }
 );

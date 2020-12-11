@@ -1,8 +1,4 @@
-.gsjackctl-status {
-  /*min-width: 240px;*/
-}
-
-.gsjackctl-xruns.has-xruns {
+.gsjackctl-xruns-label.has-xruns {
   font-weight: bold;
   color: orange;
 }
