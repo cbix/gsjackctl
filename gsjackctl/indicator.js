@@ -43,7 +43,6 @@ class Indicator extends PanelMenu.Button {
     }
 
     setStatus(status) {
-        // log('Indicator.setStatus', JSON.stringify(status));
         if (status.started) {
             if (status.xruns > 0)
                 this._icon.gicon = this._iconJackXruns;

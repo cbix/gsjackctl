@@ -140,7 +140,6 @@ var Status = GObject.registerClass({
 
         // Connect signals
         this._xrunsClearButton.connect('clicked', () => {
-            log('clear xruns');
             this.emit('clear-xruns');
         });
     }

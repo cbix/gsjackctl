@@ -27,14 +27,11 @@ var Extension = class Extension {
     }
 
     enable() {
-        log('Extension.enable()');
         try {
             // setup dbus
-            log('setup dbus');
             this._jackctl = new JackControl();
 
             // setup widgets
-            log('setup widgets');
             this._indicator = new Indicator();
             this._status = new Status();
             this._control = new Control();
@@ -43,7 +40,6 @@ var Extension = class Extension {
             Main.panel.addToStatusArea(this._uuid, this._indicator);
 
             // connect signals
-            log('connect signals');
             this._status.connect('clear-xruns', () => {
                 log('status.clear-xruns');
                 try {
@@ -56,7 +52,6 @@ var Extension = class Extension {
             });
 
             this._control.connect('start-jack', () => {
-                log('control.start-jack');
                 try {
                     this._jackctl.StartServerSync();
                 } catch (e) {
@@ -68,7 +63,6 @@ var Extension = class Extension {
             });
 
             this._control.connect('stop-jack', () => {
-                log('control.stop-jack');
                 try {
                     this._jackctl.StopServerSync();
                 } catch (e) {
@@ -80,12 +74,10 @@ var Extension = class Extension {
             });
 
             this._jackctl.connectSignal('ServerStarted', () => {
-                log('jackctl.ServerStarted');
                 this.startBackground();
             });
 
             this._jackctl.connectSignal('ServerStopped', () => {
-                log('jackctl.ServerStopped');
                 this.updateStatus();
             });
 
