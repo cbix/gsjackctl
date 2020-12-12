@@ -1,8 +1,8 @@
-.gsjackctl-xruns.has-xruns {
+.gsjackctl-xruns-label.has-xruns {
   font-weight: bold;
   color: orange;
 }
 
-.gsjackctl-xruns-button {
+.gsjackctl-inline-button {
   min-height: auto;
 }
