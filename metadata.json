@@ -1,8 +1,9 @@
 {
   "name": "gsjackctl",
   "description": "JACK control using jackdbus.",
-  "uuid": "gsjackctl@cbix.de",
   "shell-version": [
     "3.38"
-  ]
+  ],
+  "url": "https://github.com/cbix/gsjackctl",
+  "uuid": "gsjackctl@cbix.de"
 }
