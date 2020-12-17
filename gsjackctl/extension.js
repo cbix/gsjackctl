@@ -23,6 +23,7 @@ var Extension = class Extension {
         this._jackctl = null;
         this._indicator = null;
         this._status = null;
+        this._buffersize = 256;
         this._backgroundRunning = false;
     }
 
@@ -40,6 +41,30 @@ var Extension = class Extension {
             Main.panel.addToStatusArea(this._uuid, this._indicator);
 
             // connect signals
+            this._status.connect('decrease-buffersize', () => {
+                log('status.decrease-buffersize');
+                try {
+                    const bs = Math.max(8, Math.pow(2, Math.floor(Math.log2(this._buffersize)) - 1));
+                    this._jackctl.SetBufferSizeRemote([bs], () => {
+                        this.updateStatus();
+                    });
+                } catch (e) {
+                    logError(e, 'gsjackctl.decrease-buffersize');
+                }
+            });
+
+            this._status.connect('increase-buffersize', () => {
+                log('status.increase-buffersize');
+                try {
+                    const bs = Math.min(8192, Math.pow(2, Math.ceil(Math.log2(this._buffersize)) + 1));
+                    this._jackctl.SetBufferSizeRemote([bs], () => {
+                        this.updateStatus();
+                    });
+                } catch (e) {
+                    logError(e, 'gsjackctl.increase-buffersize');
+                }
+            });
+
             this._status.connect('clear-xruns', () => {
                 log('status.clear-xruns');
                 try {
@@ -108,6 +133,7 @@ var Extension = class Extension {
                 const [buffersize] = this._jackctl.GetBufferSizeSync();
 
                 status = {started, rt, load, xruns, sr, latency, buffersize};
+                this._buffersize = Math.min(8192, Math.max(8, buffersize));
             }
 
             this._status.setStatus(status);

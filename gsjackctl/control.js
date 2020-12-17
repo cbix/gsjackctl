@@ -51,20 +51,20 @@ var Control = GObject.registerClass({
         });
         modal.contentLayout.add_child(content);
         modal.addButton({
+            label: 'No',
+            action: () => {
+                modal.close();
+            },
+            default: true,
+            key: Clutter.KEY_Escape,
+        });
+        modal.addButton({
             label: 'Yes',
             action: () => {
                 this.emit('stop-jack');
                 modal.close();
             },
             default: false,
-            key: Clutter.KEY_Escape,
-        });
-        modal.addButton({
-            label: 'No',
-            action: () => {
-                modal.close();
-            },
-            default: true,
             key: Clutter.KEY_Escape,
         });
         modal.open();

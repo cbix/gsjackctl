@@ -14,6 +14,8 @@ const PopupMenu = imports.ui.popupMenu;
 
 var Status = GObject.registerClass({
     Signals: {
+        'decrease-buffersize': {},
+        'increase-buffersize': {},
         'clear-xruns': {},
     },
 }, class Status extends PopupMenu.PopupBaseMenuItem {
@@ -25,6 +27,12 @@ var Status = GObject.registerClass({
         });
 
         // build UI
+        this._stoppedStatus = new St.Label({
+            text: 'JACK stopped',
+            visible: true,
+        });
+        this.add_child(this._stoppedStatus);
+
         const layout = new Clutter.GridLayout({
             orientation: Clutter.Orientation.VERTICAL,
             row_spacing: 8,
@@ -105,6 +113,27 @@ var Status = GObject.registerClass({
             x_expand: true,
             style_class: 'gsjackctl-status-value',
         });
+        const increaseIcon = new St.Icon({
+            icon_name: 'value-increase-symbolic',
+            style_class: 'popup-menu-icon',
+        });
+        const decreaseIcon = new St.Icon({
+            icon_name: 'value-decrease-symbolic',
+            style_class: 'popup-menu-icon',
+        });
+        this._increaseBuffersizeButton = new St.Button({
+            child: increaseIcon,
+            can_focus: true,
+            style_class: 'gsjackctl-buffersize-button gsjackctl-inline-button',
+        });
+        this._decreaseBuffersizeButton = new St.Button({
+            child: decreaseIcon,
+            can_focus: true,
+            style_class: 'gsjackctl-buffersize-button gsjackctl-inline-button',
+        });
+        this._changeBuffersizeButtons = new St.BoxLayout();
+        this._changeBuffersizeButtons.add_child(this._decreaseBuffersizeButton);
+        this._changeBuffersizeButtons.add_child(this._increaseBuffersizeButton);
         /* not implemented
         const changeBuffersizeIcon = new St.Icon({
             icon_name: 'document-edit-symbolic',
@@ -118,6 +147,7 @@ var Status = GObject.registerClass({
         */
         layout.attach_next_to(this._buffersizeLabel, null, Clutter.GridPosition.BOTTOM, 1, 1);
         layout.attach_next_to(this._buffersizeValue, this._buffersizeLabel, Clutter.GridPosition.RIGHT, 1, 1);
+        layout.attach_next_to(this._changeBuffersizeButtons, this._buffersizeValue, Clutter.GridPosition.RIGHT, 1, 1);
         // layout.attach_next_to(this._changeBuffersizeButton, this._buffersizeValue, Clutter.GridPosition.RIGHT, 1, 1);
 
         // Xruns status + clear button
@@ -139,12 +169,19 @@ var Status = GObject.registerClass({
         layout.attach_next_to(this._xrunsClearButton, this._xrunsStatusLabel, Clutter.GridPosition.RIGHT, 1, 1);
 
         // Connect signals
+        this._decreaseBuffersizeButton.connect('clicked', () => {
+            this.emit('decrease-buffersize');
+        });
+        this._increaseBuffersizeButton.connect('clicked', () => {
+            this.emit('increase-buffersize');
+        });
         this._xrunsClearButton.connect('clicked', () => {
             this.emit('clear-xruns');
         });
     }
 
     setStatus(status) {
+        this._stoppedStatus.visible = !status.started;
         this._grid.visible = status.started;
         if (status.started) {
             this._rtLabel.visible = status.rt;
@@ -153,6 +190,8 @@ var Status = GObject.registerClass({
             this._latencyValue.text = `${status.latency.toFixed(1)} ms`;
             this._buffersizeValue.text = `${status.buffersize}`;
             this._xrunsStatusLabel.text = `${status.xruns} xrun${status.xruns === 1 ? '' : 's'}`;
+            this._decreaseBuffersizeButton.visible = (status.buffersize > 8);
+            this._increaseBuffersizeButton.visible = (status.buffersize < 8192);
             this._xrunsClearButton.visible = (status.xruns > 0);
 
             if (status.xruns > 0)
