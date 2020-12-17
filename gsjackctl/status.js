@@ -27,6 +27,12 @@ var Status = GObject.registerClass({
         });
 
         // build UI
+        this._errorStatus = new St.Label({
+            text: 'Error',
+            visible: false,
+        });
+        this.add_child(this._errorStatus);
+
         this._stoppedStatus = new St.Label({
             text: 'JACK stopped',
             visible: true,
@@ -131,7 +137,10 @@ var Status = GObject.registerClass({
             can_focus: true,
             style_class: 'gsjackctl-buffersize-button gsjackctl-inline-button',
         });
-        this._changeBuffersizeButtons = new St.BoxLayout();
+        this._changeBuffersizeButtons = new St.BoxLayout({
+            x_expand: true,
+            x_align: Clutter.ActorAlign.CENTER,
+        });
         this._changeBuffersizeButtons.add_child(this._decreaseBuffersizeButton);
         this._changeBuffersizeButtons.add_child(this._increaseBuffersizeButton);
         /* not implemented
@@ -163,7 +172,7 @@ var Status = GObject.registerClass({
         this._xrunsClearButton = new St.Button({
             child: xrunsClearIcon,
             can_focus: true,
-            style_class: 'gsjackctl-xruns-button gsjackctl-inline-button button',
+            style_class: 'gsjackctl-xruns-button gsjackctl-inline-button',
         });
         layout.attach_next_to(this._xrunsStatusLabel, null, Clutter.GridPosition.BOTTOM, 2, 1);
         layout.attach_next_to(this._xrunsClearButton, this._xrunsStatusLabel, Clutter.GridPosition.RIGHT, 1, 1);
@@ -184,6 +193,7 @@ var Status = GObject.registerClass({
         this._stoppedStatus.visible = !status.started;
         this._grid.visible = status.started;
         if (status.started) {
+            this._errorStatus.visible = false;
             this._rtLabel.visible = status.rt;
             this._loadValue.text = `${status.load.toFixed(1)} %`;
             this._samplerateValue.text = `${status.sr / 1000} kHz`;
@@ -203,8 +213,9 @@ var Status = GObject.registerClass({
     }
 
     setError(e) {
-        // TODO
         log('status.setError', e.message);
+        this._errorStatus.text = e.message;
+        this._errorStatus.visible = true;
     }
 }
 );
