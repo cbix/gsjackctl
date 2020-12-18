@@ -16,6 +16,7 @@ const {Indicator} = Local.imports.gsjackctl.indicator;
 const {Status} = Local.imports.gsjackctl.status;
 const {Control} = Local.imports.gsjackctl.control;
 const {JackControl} = Local.imports.jack.jackdbus;
+const {A2j} = Local.imports.jack.a2jdbus;
 
 var Extension = class Extension {
     constructor(uuid) {
@@ -25,12 +26,16 @@ var Extension = class Extension {
         this._status = null;
         this._buffersize = 256;
         this._backgroundRunning = false;
+
+        // TODO make this configurable
+        this._a2jAutostart = true;
     }
 
     enable() {
         try {
             // setup dbus
             this._jackctl = new JackControl();
+            this._a2j = new A2j();
 
             // setup widgets
             this._indicator = new Indicator();
@@ -79,6 +84,9 @@ var Extension = class Extension {
             this._control.connect('start-jack', () => {
                 try {
                     this._jackctl.StartServerSync();
+                    if (this._a2jAutostart)
+                        this._a2j.startSync();
+
                 } catch (e) {
                     logError(e, 'gsjackctl.start-jack');
                     // TODO: make this a signal maybe?
@@ -88,10 +96,17 @@ var Extension = class Extension {
             });
 
             this._control.connect('stop-jack', () => {
+                if (this._a2jAutostart) {
+                    try {
+                        this._a2j.stopSync();
+                    } catch (e) {
+                        logError(e, 'gsjackctl.stop-jack a2j.stop');
+                    }
+                }
                 try {
                     this._jackctl.StopServerSync();
                 } catch (e) {
-                    logError(e, 'gsjackctl.stop-jack');
+                    logError(e, 'gsjackctl.stop-jack jackctl.StopServer');
                     // TODO: make this a signal maybe?
                     this._status.setError(e);
                     this._indicator.setError(e);
@@ -103,6 +118,14 @@ var Extension = class Extension {
             });
 
             this._jackctl.connectSignal('ServerStopped', () => {
+                this.updateStatus();
+            });
+
+            this._a2j.connectSignal('bridge-started', () => {
+                this.updateStatus();
+            });
+
+            this._a2j.connectSignal('bridge-stopped', () => {
                 this.updateStatus();
             });
 
@@ -131,8 +154,9 @@ var Extension = class Extension {
                 const [sr] = this._jackctl.GetSampleRateSync();
                 const [latency] = this._jackctl.GetLatencySync();
                 const [buffersize] = this._jackctl.GetBufferSizeSync();
+                const [a2j] = this._a2j.is_startedSync();
 
-                status = {started, rt, load, xruns, sr, latency, buffersize};
+                status = {started, rt, load, xruns, sr, latency, buffersize, a2j};
                 this._buffersize = Math.min(8192, Math.max(8, buffersize));
             }
 

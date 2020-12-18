@@ -177,6 +177,20 @@ var Status = GObject.registerClass({
         layout.attach_next_to(this._xrunsStatusLabel, null, Clutter.GridPosition.BOTTOM, 2, 1);
         layout.attach_next_to(this._xrunsClearButton, this._xrunsStatusLabel, Clutter.GridPosition.RIGHT, 1, 1);
 
+        // a2jmidid status
+        this._a2jLabel = new St.Label({
+            text: 'ALSA MIDI bridge:',
+            x_expand: true,
+            style_class: 'gsjackctl-status-label',
+        });
+        this._a2jValue = new St.Label({
+            text: 'Off',
+            x_expand: true,
+            style_class: 'gsjackctl-status-value',
+        });
+        layout.attach_next_to(this._a2jLabel, null, Clutter.GridPosition.BOTTOM, 1, 1);
+        layout.attach_next_to(this._a2jValue, this._a2jLabel, Clutter.GridPosition.RIGHT, 1, 1);
+
         // Connect signals
         this._decreaseBuffersizeButton.connect('clicked', () => {
             this.emit('decrease-buffersize');
@@ -200,6 +214,8 @@ var Status = GObject.registerClass({
             this._latencyValue.text = `${status.latency.toFixed(1)} ms`;
             this._buffersizeValue.text = `${status.buffersize}`;
             this._xrunsStatusLabel.text = `${status.xruns} xrun${status.xruns === 1 ? '' : 's'}`;
+            this._a2jValue.text = status.a2j ? 'On' : 'Off';
+
             this._decreaseBuffersizeButton.visible = (status.buffersize > 8);
             this._increaseBuffersizeButton.visible = (status.buffersize < 8192);
             this._xrunsClearButton.visible = (status.xruns > 0);
