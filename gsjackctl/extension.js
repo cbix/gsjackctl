@@ -37,6 +37,13 @@ var Extension = class Extension {
             this._jackctl = new JackControl();
             this._a2j = new A2j();
 
+            // initial configuration
+            try {
+                this._a2j.set_hw_exportRemote([true]);
+            } catch (e) {
+                logError(e, 'gsjackctl.a2j.set_hw_export');
+            }
+
             // setup widgets
             this._indicator = new Indicator();
             this._status = new Status();
@@ -84,9 +91,10 @@ var Extension = class Extension {
             this._control.connect('start-jack', () => {
                 try {
                     this._jackctl.StartServerSync();
-                    if (this._a2jAutostart)
+                    if (this._a2jAutostart) {
+                        this._a2j.set_hw_exportSync([true]);
                         this._a2j.startSync();
-
+                    }
                 } catch (e) {
                     logError(e, 'gsjackctl.start-jack');
                     // TODO: make this a signal maybe?
