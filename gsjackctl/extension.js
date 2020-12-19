@@ -15,6 +15,7 @@ const Main = imports.ui.main;
 const {Indicator} = Local.imports.gsjackctl.indicator;
 const {Status} = Local.imports.gsjackctl.status;
 const {Control} = Local.imports.gsjackctl.control;
+const {A2jControl} = Local.imports.gsjackctl.a2jControl;
 const {JackControl} = Local.imports.jack.jackdbus;
 
 var Extension = class Extension {
@@ -25,6 +26,9 @@ var Extension = class Extension {
         this._status = null;
         this._buffersize = 256;
         this._backgroundRunning = false;
+
+        // TODO make this configurable
+        this._a2jAutostart = true;
     }
 
     enable() {
@@ -37,6 +41,13 @@ var Extension = class Extension {
             this._status = new Status();
             this._control = new Control();
             this._indicator.menu.addMenuItem(this._status);
+            try {
+                this._a2jControl = new A2jControl();
+                this._indicator.menu.addMenuItem(this._a2jControl);
+            } catch (e) {
+                this._a2jControl = false;
+                log('gsjackctl: a2jmidid not available');
+            }
             this._indicator.menu.addMenuItem(this._control);
             Main.panel.addToStatusArea(this._uuid, this._indicator);
 
@@ -79,6 +90,9 @@ var Extension = class Extension {
             this._control.connect('start-jack', () => {
                 try {
                     this._jackctl.StartServerSync();
+                    if (this._a2jAutostart && this._a2jControl)
+                        this._a2jControl.start();
+
                 } catch (e) {
                     logError(e, 'gsjackctl.start-jack');
                     // TODO: make this a signal maybe?
@@ -88,10 +102,13 @@ var Extension = class Extension {
             });
 
             this._control.connect('stop-jack', () => {
+                if (this._a2jAutostart && this._a2jControl)
+                    this._a2jControl.stop();
+
                 try {
                     this._jackctl.StopServerSync();
                 } catch (e) {
-                    logError(e, 'gsjackctl.stop-jack');
+                    logError(e, 'gsjackctl.stop-jack jackctl.StopServer');
                     // TODO: make this a signal maybe?
                     this._status.setError(e);
                     this._indicator.setError(e);
@@ -135,6 +152,7 @@ var Extension = class Extension {
                 status = {started, rt, load, xruns, sr, latency, buffersize};
                 this._buffersize = Math.min(8192, Math.max(8, buffersize));
             }
+            this._a2jControl.visible = started;
 
             this._status.setStatus(status);
             this._indicator.setStatus(status);

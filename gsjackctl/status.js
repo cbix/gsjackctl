@@ -200,6 +200,7 @@ var Status = GObject.registerClass({
             this._latencyValue.text = `${status.latency.toFixed(1)} ms`;
             this._buffersizeValue.text = `${status.buffersize}`;
             this._xrunsStatusLabel.text = `${status.xruns} xrun${status.xruns === 1 ? '' : 's'}`;
+
             this._decreaseBuffersizeButton.visible = (status.buffersize > 8);
             this._increaseBuffersizeButton.visible = (status.buffersize < 8192);
             this._xrunsClearButton.visible = (status.xruns > 0);
