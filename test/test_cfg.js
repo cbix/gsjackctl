@@ -10,7 +10,6 @@ try {
         const jackcfg = new JackConfigure();
         const configtree = jackcfg._fullConfigurationTree();
         print(JSON.stringify(configtree));
-
     } catch (e) {
         print(`Error: ${e}`);
     }
