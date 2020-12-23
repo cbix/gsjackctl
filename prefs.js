@@ -4,13 +4,13 @@ imports.gi.versions.Gtk = '3.0';
 
 const {GLib, GObject, Gtk} = imports.gi;
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+// const ExtensionUtils = imports.misc.extensionUtils;
+// const Me = ExtensionUtils.getCurrentExtension();
 
 
 // Like `extension.js` this is used for any one-time setup like translations.
 function init() {
-    log(`initializing ${Me.metadata.name} Preferences`);
+    log('initializing gsjackctl Preferences');
 }
 
 var PrefsWidget = GObject.registerClass(
