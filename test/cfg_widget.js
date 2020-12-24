@@ -57,20 +57,6 @@ class TestWindow {
 
         this._treeStore.set_column_types(colTypes);
 
-        /*
-        const itA = this._treeStore.append(null);
-        const itB = this._treeStore.append(null);
-        const itFoo = this._treeStore.append(itA);
-        const itBar = this._treeStore.append(itB);
-        const itBaz = this._treeStore.append(itBar);
-
-        this._treeStore.set(itA, [COL_KEY, COL_DESC, COL_LEAF], ['a', 'A', false]);
-        this._treeStore.set(itB, [COL_KEY, COL_DESC, COL_LEAF], ['b', 'B', false]);
-        this._treeStore.set(itFoo, [COL_KEY, COL_DESC, COL_LEAF], ['foo', 'Foo', true]);
-        this._treeStore.set(itBar, [COL_KEY, COL_DESC, COL_LEAF], ['bar', 'Bar', false]);
-        this._treeStore.set(itBaz, [COL_KEY, COL_DESC, COL_LEAF], ['baz', 'Baz', true]);
-        */
-
         // adaptation of _fullConfigurationTree() traversing for TreeStore
         const pathStack = [[]],
             iterStack = [null];

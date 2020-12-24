@@ -4,8 +4,20 @@ imports.gi.versions.Gtk = '3.0';
 
 const {GLib, GObject, Gtk} = imports.gi;
 
-// const ExtensionUtils = imports.misc.extensionUtils;
-// const Me = ExtensionUtils.getCurrentExtension();
+const ExtensionUtils = imports.misc.extensionUtils;
+const Local = ExtensionUtils.getCurrentExtension();
+
+const {JackConfigure} = Local.imports.jack.jackdbus;
+
+const COL_KEY = 0,
+    COL_VALUE = 1,
+    COL_DEFAULT = 2,
+    COL_DESC = 3,
+    COL_LEAF = 4,
+    COL_ISRANGE = 5,
+    COL_ISSTRICT = 6,
+    COL_ISFAKEVALUE = 7,
+    COL_VALUES = 8;
 
 
 // Like `extension.js` this is used for any one-time setup like translations.
@@ -14,102 +26,112 @@ function init() {
 }
 
 var PrefsWidget = GObject.registerClass(
-class PrefsWidget extends Gtk.Grid {
+class PrefsWidget extends Gtk.ScrolledWindow {
     _init(params) {
         super._init(params);
 
+        this._jackcfg = new JackConfigure();
+
         log('building prefs widget...');
 
-        // example from https://developer.gnome.org/gnome-devel-demos/stable/treeview_simple_liststore.js.html.en
+        this._treeStore = new Gtk.TreeStore();
+        const colTypes = [];
+        colTypes[COL_KEY] = GObject.TYPE_STRING;
+        colTypes[COL_VALUE] = GObject.TYPE_VARIANT;
+        colTypes[COL_DEFAULT] = GObject.TYPE_VARIANT;
+        colTypes[COL_DESC] = GObject.TYPE_STRING;
+        colTypes[COL_LEAF] = GObject.TYPE_BOOLEAN;
+        colTypes[COL_ISFAKEVALUE] = GObject.TYPE_BOOLEAN;
+        colTypes[COL_ISRANGE] = GObject.TYPE_BOOLEAN;
+        colTypes[COL_ISSTRICT] = GObject.TYPE_BOOLEAN;
+        colTypes[COL_VALUES] = GObject.TYPE_VARIANT;
 
-        // Create the underlying liststore for the phonebook
-        this._listStore = new Gtk.ListStore();
-        this._listStore.set_column_types([
-            GObject.TYPE_STRING,
-            GObject.TYPE_STRING,
-            GObject.TYPE_STRING,
-            GObject.TYPE_STRING,
-        ]);
+        this._treeStore.set_column_types(colTypes);
 
-        // Data to go in the phonebook
-        this._phonebook =
-            [{name: 'Jurg', surname: 'Billeter', phone: '555-0123',
-                description: 'A friendly person.'},
-            {name: 'Johannes', surname: 'Schmid', phone: '555-1234',
-                description: 'Easy phone number to remember.'},
-            {name: 'Julita', surname: 'Inca', phone: '555-2345',
-                description: 'Another friendly person.'},
-            {name: 'Javier', surname: 'Jardon', phone: '555-3456',
-                description: 'Bring fish for his penguins.'},
-            {name: 'Jason', surname: 'Clinton', phone: '555-4567',
-                description: "His cake's not a lie."},
-            {name: 'Random J.', surname: 'Hacker', phone: '555-5678',
-                description: 'Very random!'}];
+        // adaptation of _fullConfigurationTree() traversing for TreeStore
+        const pathStack = [[]],
+            iterStack = [null];
+        while (pathStack.length > 0) {
+            const path = pathStack.pop();
+            const iter = iterStack.pop() || null;
+            const [isLeaf, nodes] = this._jackcfg.ReadContainerSync(path);
 
-        log(`_phonebook = ${JSON.stringify(this._phonebook)}`);
+            // set leaf flag in store, except for root node
+            if (iter)
+                this._treeStore.set(iter, [COL_LEAF], [isLeaf]);
 
-        // Put the data in the phonebook
-        for (let i = 0; i < this._phonebook.length; i++) {
-            const contact = this._phonebook[i];
-            this._listStore.set(this._listStore.append(), [0, 1, 2, 3],
-                [contact.name, contact.surname, contact.phone, contact.description]);
+            if (!isLeaf) {
+                nodes.forEach(node => {
+                    const newPath = path.concat(node);
+                    pathStack.push(newPath);
+                    const newIter = this._treeStore.append(iter);
+                    iterStack.push(newIter);
+                    this._treeStore.set(newIter, [COL_KEY], [node]);
+                });
+            } else {
+                nodes.forEach(node => {
+                    const newPath = path.concat(node);
+                    const [paramInfo] = this._jackcfg.GetParameterInfoSync(newPath);
+                    // const paramValue = this._jackcfg.GetParameterValueSync(newPath);
+                    const paramConstraint = this._jackcfg.GetParameterConstraintSync(newPath);
+                    const newIter = this._treeStore.append(iter);
+                    this._treeStore.set(newIter, [
+                        COL_KEY,
+                        COL_DESC,
+                        COL_ISRANGE,
+                        COL_ISRANGE,
+                        COL_ISFAKEVALUE,
+                    ], [
+                        paramInfo[1],
+                        paramInfo[2],
+                        paramConstraint[0],
+                        paramConstraint[1],
+                        paramConstraint[2],
+                    ]);
+                });
+            }
         }
 
-        log(`_listStore = ${JSON.stringify(this._listStore)}`);
-
-        // Create the treeview
-        this._treeView = new Gtk.TreeView({expand: true,
-            model: this._listStore});
-
-        log(`_treeView = ${JSON.stringify(this._treeView)}`);
-
-        // Create the columns for the address book
-        this._firstName = new Gtk.TreeViewColumn({title: 'First Name'});
-        this._lastName = new Gtk.TreeViewColumn({title: 'Last Name'});
-        this._phone = new Gtk.TreeViewColumn({title: 'Phone Number'});
-
-        // Create a cell renderer for when bold text is needed
-        // const bold = new Gtk.CellRendererText({weight: Pango.Weight.BOLD});
-
-        // Create a cell renderer for normal text
-        this._normal = new Gtk.CellRendererText();
-
-        // Pack the cell renderers into the columns
-        this._firstName.pack_start(this._normal, true);
-        this._lastName.pack_start(this._normal, true);
-        this._phone.pack_start(this._normal, true);
-
-        // Set each column to pull text from the TreeView's model
-        this._firstName.add_attribute(this._normal, 'text', 0);
-        this._lastName.add_attribute(this._normal, 'text', 1);
-        this._phone.add_attribute(this._normal, 'text', 2);
-
-        // Insert the columns into the treeview
-        this._treeView.insert_column(this._firstName, 0);
-        this._treeView.insert_column(this._lastName, 1);
-        this._treeView.insert_column(this._phone, 2);
-
-        // Create the label that shows details for the name you select
-        this._label = new Gtk.Label({label: ''});
-
-        // Get which item is selected
-        this._selection = this._treeView.get_selection();
-
-        // When something new is selected, call _on_changed
-        this._selection.connect('changed', () => {
-            const [, , iter] = this._selection.get_selected();
-
-            // Set the label to read off the values stored in the current selection
-            this._label.set_label('\n' +
-            this._listStore.get_value(iter, 0) + ' ' +
-            this._listStore.get_value(iter, 1) + ' ' +
-            this._listStore.get_value(iter, 2) + '\n' +
-            this._listStore.get_value(iter, 3)
-            );
-
+        this._treeView = new Gtk.TreeView({
+            expand: true,
+            model: this._treeStore,
         });
-        this.attach(this._treeView, 0, 0, 1, 1);
-        this.attach(this._label, 0, 1, 1, 1);
+
+        const colKey = new Gtk.TreeViewColumn({title: 'Key'});
+        // const colValue = new Gtk.TreeViewColumn({title: 'Value'});
+        // const colDefault = new Gtk.TreeViewColumn({title: 'Default'});
+        const colDescription = new Gtk.TreeViewColumn({title: 'Description'});
+        const colState = new Gtk.TreeViewColumn({
+            title: 'State',
+        });
+
+        const normalRenderer = new Gtk.CellRendererText();
+        const toggleRenderer = new Gtk.CellRendererToggle({
+            activatable: true,
+        });
+        toggleRenderer.connect('toggled', (rend, path) => {
+            const [ok, it] = this._treeStore.get_iter_from_string(path);
+            print(`toggled: ${rend.active}, ${ok}`);
+            if (ok)
+                // test
+                this._treeStore.set(it, [COL_ISSTRICT], [!rend.active]);
+
+            // const currentState = this._treeStore.
+        });
+
+        colKey.pack_start(normalRenderer, true);
+        colDescription.pack_start(normalRenderer, true);
+        colState.pack_start(toggleRenderer, true);
+
+        colKey.add_attribute(normalRenderer, 'text', COL_KEY);
+        colDescription.add_attribute(normalRenderer, 'text', COL_DESC);
+
+        this._treeView.insert_column(colKey, 0);
+        this._treeView.insert_column(colDescription, 1);
+        this._treeView.insert_column(colState, 2);
+
+        this.add(this._treeView);
+        this.show_all();
     }
 }
 );
