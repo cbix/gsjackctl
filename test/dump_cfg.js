@@ -1,7 +1,7 @@
 #!/usr/bin/env -S gjs -I ..
 
 // prints the full configuration tree as json. It's recommended to be run through a json pretty-printer, like
-// ./test_cfg.js | jsonpp
+// ./dump_cfg.js | jsonpp
 
 try {
     const {JackConfigure} = imports.jack.jackdbus;
