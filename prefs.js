@@ -17,13 +17,27 @@ const COL_KEY = 0,
     COL_ISRANGE = 5,
     COL_ISSTRICT = 6,
     COL_ISFAKEVALUE = 7,
-    COL_VALUES = 8;
+    COL_VALUES = 8,
+    COL_VALUESTRING = 9,
+    COL_DEFAULTSTRING = 10;
 
 
 // Like `extension.js` this is used for any one-time setup like translations.
 function init() {
     log('initializing gsjackctl Preferences');
 }
+
+var CellRendererVariant = GObject.registerClass(
+class CellRendererVariant extends Gtk.CellRenderer {
+    constructor(params) {
+        super(params);
+        this._textRenderer = new Gtk.CellRendererText();
+        this._toggleRenderer = new Gtk.CellRendererToggle();
+        this._comboRenderer = new Gtk.CellRendererCombo();
+        this._spinRenderer = new Gtk.CellRendererSpin();
+    }
+}
+);
 
 var PrefsWidget = GObject.registerClass(
 class PrefsWidget extends Gtk.ScrolledWindow {
@@ -45,6 +59,8 @@ class PrefsWidget extends Gtk.ScrolledWindow {
         colTypes[COL_ISRANGE] = GObject.TYPE_BOOLEAN;
         colTypes[COL_ISSTRICT] = GObject.TYPE_BOOLEAN;
         colTypes[COL_VALUES] = GObject.TYPE_VARIANT;
+        colTypes[COL_VALUESTRING] = GObject.TYPE_STRING;
+        colTypes[COL_DEFAULTSTRING] = GObject.TYPE_STRING;
 
         this._treeStore.set_column_types(colTypes);
 
@@ -72,17 +88,21 @@ class PrefsWidget extends Gtk.ScrolledWindow {
                 nodes.forEach(node => {
                     const newPath = path.concat(node);
                     const [paramInfo] = this._jackcfg.GetParameterInfoSync(newPath);
-                    // const paramValue = this._jackcfg.GetParameterValueSync(newPath);
+                    const paramValue = this._jackcfg.GetParameterValueSync(newPath);
                     const paramConstraint = this._jackcfg.GetParameterConstraintSync(newPath);
                     const newIter = this._treeStore.append(iter);
                     this._treeStore.set(newIter, [
                         COL_KEY,
+                        COL_VALUESTRING,
+                        COL_DEFAULTSTRING,
                         COL_DESC,
                         COL_ISRANGE,
                         COL_ISRANGE,
                         COL_ISFAKEVALUE,
                     ], [
                         paramInfo[1],
+                        paramValue[2].print(true),
+                        paramValue[1].print(true),
                         paramInfo[2],
                         paramConstraint[0],
                         paramConstraint[1],
@@ -98,12 +118,15 @@ class PrefsWidget extends Gtk.ScrolledWindow {
         });
 
         const colKey = new Gtk.TreeViewColumn({title: 'Key'});
-        // const colValue = new Gtk.TreeViewColumn({title: 'Value'});
-        // const colDefault = new Gtk.TreeViewColumn({title: 'Default'});
+        const colValue = new Gtk.TreeViewColumn({title: 'Value'});
+        const colDefault = new Gtk.TreeViewColumn({title: 'Default'});
         const colDescription = new Gtk.TreeViewColumn({title: 'Description'});
         const colState = new Gtk.TreeViewColumn({
             title: 'State',
         });
+
+        // dynamic renderer
+        const variantRenderer = new CellRendererVariant();
 
         const normalRenderer = new Gtk.CellRendererText();
         const toggleRenderer = new Gtk.CellRendererToggle({
@@ -120,15 +143,21 @@ class PrefsWidget extends Gtk.ScrolledWindow {
         });
 
         colKey.pack_start(normalRenderer, true);
+        colValue.pack_start(normalRenderer, true);
+        colDefault.pack_start(normalRenderer, true);
         colDescription.pack_start(normalRenderer, true);
         colState.pack_start(toggleRenderer, true);
 
         colKey.add_attribute(normalRenderer, 'text', COL_KEY);
+        colValue.add_attribute(normalRenderer, 'text', COL_VALUESTRING);
+        colDefault.add_attribute(normalRenderer, 'text', COL_DEFAULTSTRING);
         colDescription.add_attribute(normalRenderer, 'text', COL_DESC);
 
         this._treeView.insert_column(colKey, 0);
-        this._treeView.insert_column(colDescription, 1);
-        this._treeView.insert_column(colState, 2);
+        this._treeView.insert_column(colValue, 1);
+        this._treeView.insert_column(colDefault, 2);
+        this._treeView.insert_column(colDescription, 3);
+        this._treeView.insert_column(colState, 4);
 
         this.add(this._treeView);
         this.show_all();
