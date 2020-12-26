@@ -101,8 +101,8 @@ class PrefsWidget extends Gtk.ScrolledWindow {
                         COL_ISFAKEVALUE,
                     ], [
                         paramInfo[1],
-                        paramValue[2].print(true),
-                        paramValue[1].print(true),
+                        `${paramValue[2].get_type_string()}:${paramValue[2].print(false)}`,
+                        `${paramValue[1].get_type_string()}:${paramValue[1].print(false)}`,
                         paramInfo[2],
                         paramConstraint[0],
                         paramConstraint[1],
