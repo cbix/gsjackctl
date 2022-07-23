@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-const Local = imports.ui.main.extensionManager.lookup('gsjackctl@cbix.de');
+const Local = imports.misc.extensionUtils.getCurrentExtension();
 
 const {GLib, GObject} = imports.gi;
 const Main = imports.ui.main;
@@ -26,6 +26,7 @@ var Extension = class Extension {
         this._status = null;
         this._buffersize = 256;
         this._backgroundRunning = false;
+        this._backgroundSource = null;
 
         // TODO make this configurable
         this._a2jAutostart = true;
@@ -134,6 +135,13 @@ var Extension = class Extension {
     disable() {
         this._indicator.destroy();
         this._indicator = null;
+        this._jackctl = null;
+        this._a2jControl = null;
+        this._status = null;
+        this._control = null;
+        if (this._backgroundSource && this._backgroundRunning)
+            GLib.Source.remove(this._backgroundSource);
+
     }
 
     updateStatus() {
@@ -171,7 +179,7 @@ var Extension = class Extension {
     startBackground(interval = 2000) {
         if (this.updateStatus() && !this._backgroundRunning) {
             this._backgroundRunning = true;
-            GLib.timeout_add(GLib.PRIORITY_DEFAULT, interval, () => {
+            this._backgroundSource = GLib.timeout_add(GLib.PRIORITY_DEFAULT, interval, () => {
                 this._backgroundRunning = this.updateStatus();
                 return this._backgroundRunning;
             });

@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-const Local = imports.ui.main.extensionManager.lookup('gsjackctl@cbix.de');
+const Local = imports.misc.extensionUtils.getCurrentExtension();
 
 const {Clutter, GObject, St, Gio, GLib} = imports.gi;
 const PanelMenu = imports.ui.panelMenu;
