@@ -11,6 +11,8 @@ const Local = imports.misc.extensionUtils.getCurrentExtension();
 
 const {GLib, GObject} = imports.gi;
 const Main = imports.ui.main;
+const ExtensionUtils = imports.misc.extensionUtils;
+const PopupMenu = imports.ui.popupMenu;
 
 const {Indicator} = Local.imports.gsjackctl.indicator;
 const {Status} = Local.imports.gsjackctl.status;
@@ -41,6 +43,7 @@ var Extension = class Extension {
             this._indicator = new Indicator();
             this._status = new Status();
             this._control = new Control();
+            this._prefs = new PopupMenu.PopupMenuItem('Settings');
             this._indicator.menu.addMenuItem(this._status);
             try {
                 this._a2jControl = new A2jControl();
@@ -49,6 +52,7 @@ var Extension = class Extension {
                 this._a2jControl = false;
                 log('gsjackctl: a2jmidid not available');
             }
+            this._indicator.menu.addMenuItem(this._prefs);
             this._indicator.menu.addMenuItem(this._control);
             Main.panel.addToStatusArea(this._uuid, this._indicator);
 
@@ -86,6 +90,10 @@ var Extension = class Extension {
                 } catch (e) {
                     logError(e, 'gsjackctl.clear-xruns');
                 }
+            });
+
+            this._prefs.connect('activate', () => {
+                ExtensionUtils.openPrefs();
             });
 
             this._control.connect('start-jack', () => {
